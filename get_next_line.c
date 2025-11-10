@@ -6,7 +6,7 @@
 /*   By: shitakah <shitakah@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/29 02:27:27 by shitakah          #+#    #+#             */
-/*   Updated: 2025/11/06 00:03:18 by shitakah         ###   ########.fr       */
+/*   Updated: 2025/11/10 22:55:45 by shitakah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,19 +23,25 @@ char	*get_next_line(int fd)
 	
 }
 
-static char	*fill_line_buffer(int fd, char *left_c, char *buffer);
+static char	*fill_line_buffer(int fd, char *left_c, char *buffer)
+{
 
-static char	*set_line(char *line_buffer);
+}
+
+static char	*set_line(char *line_buffer)
+{
+	
+}
 
 int	main(void)
 {
 
 }
 
-// 1. fdが渡される
+// 1. get_next_lineにfdが渡される
 // 2. （初回だけ）読み込み開始用のstatic変数 ptr を初期化
 // 3. ptr から \n or \0まで、malloc領域 res に複製、ポインターを返す
-//		static set_line
+//		static set_line: 
 //	 		malloc(sizeof(char) * bufsize(+1?))した領域bufにreadで保存
 //  			＊read は保存領域bufとバイト数byteを指定する必要がある
 //			そのあと、bufに \n or \0 が存在しないかチェック
