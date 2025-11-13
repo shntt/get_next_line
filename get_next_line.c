@@ -6,52 +6,136 @@
 /*   By: shitakah <shitakah@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/29 02:27:27 by shitakah          #+#    #+#             */
-/*   Updated: 2025/11/10 22:55:45 by shitakah         ###   ########.fr       */
+/*   Updated: 2025/11/13 22:14:19 by shitakah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-static char	*fill_line_buffer(int fd, char *left_c, char *buffer);
-static char	*set_line(char *line_buffer);
+static int	init_rest(char **rest)
+{
+	if (!*rest)
+	{
+		*rest = ft_strdup("");
+		if (!*rest)
+			return (0);
+	}
+	return (1);
+}
+
+static int	read_into_rest(int fd, char **rest)
+{
+	char	*buf;
+	ssize_t	rc;
+
+	buf = malloc(BUFFER_SIZE + 1);
+	if (!buf)
+		return (-1);
+	rc = read(fd, buf, BUFFER_SIZE);
+	while (rc > 0)
+	{
+		buf[rc] = '\0';
+		*rest = join_and_free(*rest, buf);
+		if (!*rest)
+			return (free(buf), -1);
+		if (ft_strchr(*rest, '\n'))
+			break ;
+		rc = read(fd, buf, BUFFER_SIZE);
+	}
+	free(buf);
+	if (rc < 0)
+		return (-1);
+	if (rc == 0 && (!*rest || **rest == '\0'))
+		return (0);
+	return (1);
+}
+
+static char	*extract_line(char **rest)
+{
+	size_t	i;
+	char	*line;
+
+	i = 0;
+	while ((*rest)[i] != '\n' && (*rest)[i] != '\0')
+		i++;
+	if ((*rest)[i] == '\n')
+		i++;
+	line = ft_substr(*rest, 0, i);
+	if (!line)
+	{
+		free(*rest);
+		*rest = NULL;
+		return (NULL);
+	}
+	return (line);
+}
+
+static int	update_rest(char **rest)
+{
+	size_t	i;
+	char	*next;
+
+	i = 0;
+	while ((*rest)[i] != '\n' && (*rest)[i] != '\0')
+		i++;
+	if ((*rest)[i] == '\0')
+	{
+		free(*rest);
+		*rest = NULL;
+		return (1);
+	}
+	next = ft_strdup(*rest + i + 1);
+	if (!next)
+	{
+		free(*rest);
+		*rest = NULL;
+		return (0);
+	}
+	free(*rest);
+	*rest = next;
+	return (1);
+}
 
 char	*get_next_line(int fd)
 {
-	size_t	bufsize;
+	static char	*rest;
+	char		*line;
+	int			status;
 
-	bufsize = 42;
-	
+	if (fd < 0 || BUFFER_SIZE <= 0 || !init_rest(&rest))
+		return (NULL);
+	status = read_into_rest(fd, &rest);
+	if (status <= 0)
+	{
+		free(rest);
+		rest = NULL;
+		return (NULL);
+	}
+	line = extract_line(&rest);
+	if (!line)
+		return (NULL);
+	if (!update_rest(&rest))
+	{
+		free(line);
+		return (NULL);
+	}
+	return (line);
 }
 
-static char	*fill_line_buffer(int fd, char *left_c, char *buffer)
-{
-
-}
-
-static char	*set_line(char *line_buffer)
-{
-	
-}
-
-int	main(void)
-{
-
-}
-
-// 1. get_next_lineにfdが渡される
-// 2. （初回だけ）読み込み開始用のstatic変数 ptr を初期化
-// 3. ptr から \n or \0まで、malloc領域 res に複製、ポインターを返す
-//		static set_line: 
-//	 		malloc(sizeof(char) * bufsize(+1?))した領域bufにreadで保存
-//  			＊read は保存領域bufとバイト数byteを指定する必要がある
-//			そのあと、bufに \n or \0 が存在しないかチェック
-//				存在しなければ、長さだけ保存して、再度read
-//				存在したら、切り分けて、
-//					前半は、長さを加算。後半はstatic変数 ptr に（\0を加え）保存
-//						ptr は tmp に逃がしておく
-//					いや、長さをカウントするんじゃなく、catするべきかも
-//						そうすればfreeできる。でもmallocをさらに増やしている
-//				buf は用済みなのでfree
-//		static fill_line_buffer
-//			長さでmalloc、元のptrから長さ分、複製する
-//		strchr, strdup, strlen, substr, strjoin
+//#include <stdio.h>
+//#include <fcntl.h>
+//int	main(void)
+//{
+//	int		fd;
+//	char	*line1;
+//	char	*line2;
+//	char	*line3;
+//	fd = open("test.txt", O_RDONLY);
+//	line1 = get_next_line(fd);
+//	line2 = get_next_line(fd);
+//	line3 = get_next_line(fd);
+//	close(fd);
+//	free(line1);
+//	free(line2);
+//	free(line3);
+//}
