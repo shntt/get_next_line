@@ -6,136 +6,108 @@
 /*   By: shitakah <shitakah@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/29 02:27:27 by shitakah          #+#    #+#             */
-/*   Updated: 2025/11/13 22:14:19 by shitakah         ###   ########.fr       */
+/*   Updated: 2025/11/28 10:53:12 by shitakah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-static int	init_rest(char **rest)
+static void	free_stash(t_stash *st)
 {
-	if (!*rest)
+	if (st->buf)
+		free(st->buf);
+	st->buf = NULL;
+	st->len = 0;
+	st->cap = 0;
+}
+
+static int	grow_stash(t_stash *st, size_t add)
+{
+	size_t	required;
+	size_t	new_cap;
+	char	*new_buf;
+
+	required = st->len + add + 1;
+	if (required <= st->cap)
+		return (1);
+	new_cap = st->cap;
+	if (!new_cap)
+		new_cap = BUFFER_SIZE + 1;
+	while (new_cap < required)
+		new_cap *= 2;
+	new_buf = malloc(new_cap);
+	if (!new_buf)
+		return (0);
+	if (st->buf)
 	{
-		*rest = ft_strdup("");
-		if (!*rest)
-			return (0);
+		ft_memmove_gnl(new_buf, st->buf, st->len);
+		free(st->buf);
 	}
+	st->buf = new_buf;
+	st->cap = new_cap;
 	return (1);
 }
 
-static int	read_into_rest(int fd, char **rest)
+static char	*read_to_stash(int fd, t_stash *st)
 {
 	char	*buf;
-	ssize_t	rc;
+	int		r;
 
 	buf = malloc(BUFFER_SIZE + 1);
 	if (!buf)
-		return (-1);
-	rc = read(fd, buf, BUFFER_SIZE);
-	while (rc > 0)
+		return (free_stash(st), NULL);
+	while (!ft_strchr_gnl(st->buf, '\n'))
 	{
-		buf[rc] = '\0';
-		*rest = join_and_free(*rest, buf);
-		if (!*rest)
-			return (free(buf), -1);
-		if (ft_strchr(*rest, '\n'))
-			break ;
-		rc = read(fd, buf, BUFFER_SIZE);
+		r = read(fd, buf, BUFFER_SIZE);
+		if (r <= 0)
+		{
+			free(buf);
+			if (r < 0)
+				free_stash(st);
+			return (st->buf);
+		}
+		if (!grow_stash(st, (size_t)r))
+			return (free(buf), free_stash(st), NULL);
+		ft_memmove_gnl(st->buf + st->len, buf, (size_t)r);
+		st->len += (size_t)r;
+		st->buf[st->len] = '\0';
 	}
 	free(buf);
-	if (rc < 0)
-		return (-1);
-	if (rc == 0 && (!*rest || **rest == '\0'))
-		return (0);
-	return (1);
+	return (st->buf);
 }
 
-static char	*extract_line(char **rest)
+static char	*extract_line(t_stash *st)
 {
 	size_t	i;
-	char	*line;
 
-	i = 0;
-	while ((*rest)[i] != '\n' && (*rest)[i] != '\0')
-		i++;
-	if ((*rest)[i] == '\n')
-		i++;
-	line = ft_substr(*rest, 0, i);
-	if (!line)
-	{
-		free(*rest);
-		*rest = NULL;
+	if (!st->buf || !st->buf[0])
 		return (NULL);
-	}
-	return (line);
-}
-
-static int	update_rest(char **rest)
-{
-	size_t	i;
-	char	*next;
-
 	i = 0;
-	while ((*rest)[i] != '\n' && (*rest)[i] != '\0')
+	while (i < st->len && st->buf[i] != '\n')
 		i++;
-	if ((*rest)[i] == '\0')
-	{
-		free(*rest);
-		*rest = NULL;
-		return (1);
-	}
-	next = ft_strdup(*rest + i + 1);
-	if (!next)
-	{
-		free(*rest);
-		*rest = NULL;
-		return (0);
-	}
-	free(*rest);
-	*rest = next;
-	return (1);
+	if (i < st->len && st->buf[i] == '\n')
+		i++;
+	return (ft_substr_gnl(st->buf, 0, (int)i));
 }
 
 char	*get_next_line(int fd)
 {
-	static char	*rest;
-	char		*line;
-	int			status;
+	static t_stash	stash;
+	char			*line;
+	size_t			consumed;
 
-	if (fd < 0 || BUFFER_SIZE <= 0 || !init_rest(&rest))
+	if (fd < 0 || BUFFER_SIZE <= 0)
 		return (NULL);
-	status = read_into_rest(fd, &rest);
-	if (status <= 0)
-	{
-		free(rest);
-		rest = NULL;
+	if (!read_to_stash(fd, &stash))
 		return (NULL);
-	}
-	line = extract_line(&rest);
+	line = extract_line(&stash);
 	if (!line)
-		return (NULL);
-	if (!update_rest(&rest))
-	{
-		free(line);
-		return (NULL);
-	}
+		return (free_stash(&stash), NULL);
+	consumed = ft_strlen_gnl(line);
+	if (!stash.buf || consumed >= stash.len)
+		return (free_stash(&stash), line);
+	ft_memmove_gnl(stash.buf, stash.buf + consumed, stash.len - consumed);
+	stash.len -= consumed;
+	stash.buf[stash.len] = '\0';
 	return (line);
 }
-
-//#include <stdio.h>
-//#include <fcntl.h>
-//int	main(void)
-//{
-//	int		fd;
-//	char	*line1;
-//	char	*line2;
-//	char	*line3;
-//	fd = open("test.txt", O_RDONLY);
-//	line1 = get_next_line(fd);
-//	line2 = get_next_line(fd);
-//	line3 = get_next_line(fd);
-//	close(fd);
-//	free(line1);
-//	free(line2);
-//	free(line3);
-//}
