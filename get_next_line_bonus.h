@@ -6,14 +6,13 @@
 /*   By: shitakah <shitakah@student.42tokyo.jp>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/05 22:53:30 by shitakah          #+#    #+#             */
-/*   Updated: 2025/12/01 21:09:48 by shitakah         ###   ########.fr       */
+/*   Updated: 2025/12/01 23:32:35 by shitakah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef GET_NEXT_LINE_BONUS_H
 # define GET_NEXT_LINE_BONUS_H
 
-# include <limits.h>
 # include <stdlib.h>
 # include <unistd.h>
 
